@@ -1,8 +1,56 @@
 flows:
-  transfer_money:
-    description: Help users send money to friends and family.
+  # Flujo principal que se activa después del saludo
+  verisure_billing_flow:
+    description: Flujo principal de Verisure para gestión de facturas pendientes
     steps:
-      - collect: recipient
-      - collect: amount
-        description: the number of US dollars to send
-      - action: utter_transfer_complete
+      - action: action_extract_client_name
+      - action: action_check_identity
+      - action: action_handle_identity_response
+
+  # Flujo cuando el cliente confirma ser Dennis
+  confirm_identity_flow:
+    description: Flujo cuando el cliente confirma su identidad
+    steps:
+      - action: action_check_identity
+      - action: utter_invoice_pending_info
+      - action: action_handle_payment_response
+
+  # Flujo cuando el cliente niega ser Dennis
+  deny_identity_flow:
+    description: Flujo cuando el cliente niega su identidad
+    steps:
+      - action: action_check_identity
+      - action: utter_wrong_person
+
+  # Flujo cuando el cliente puede pagar
+  can_pay_flow:
+    description: Flujo cuando el cliente confirma que puede pagar
+    steps:
+      - action: action_handle_payment_response
+      - action: action_handle_date_question
+
+  # Flujo cuando el cliente no puede pagar
+  cannot_pay_flow:
+    description: Flujo cuando el cliente no puede pagar
+    steps:
+      - action: action_handle_payment_response
+      - action: action_classify_reason
+
+  # Flujo cuando el cliente pregunta por la fecha de la factura
+  ask_invoice_date_flow:
+    description: Flujo cuando el cliente pregunta por la fecha de la factura
+    steps:
+      - action: action_handle_payment_response
+      - action: action_classify_reason
+
+  # Flujo para dificultades financieras
+  financial_difficulty_flow:
+    description: Flujo para clientes con dificultades financieras
+    steps:
+      - action: action_classify_reason
+
+  # Flujo para disputas de pago
+  payment_dispute_flow:
+    description: Flujo para disputas de pago
+    steps:
+      - action: action_classify_reason

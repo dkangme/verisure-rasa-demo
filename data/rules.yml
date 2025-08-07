@@ -1,0 +1,64 @@
+version: "3.1"
+
+rules:
+- rule: Start Verisure billing flow
+  steps:
+    - intent: start
+    - action: utter_greeting_and_identity_check
+
+- rule: Continue flow after greeting
+  steps:
+    - action: utter_greeting_and_identity_check
+    - action: action_extract_client_name
+    - action: action_check_identity
+
+- rule: Activate confirm identity flow
+  steps:
+    - intent: confirm_identity
+    - action: action_check_identity
+    - action: action_get_pending_invoices_info
+    - action: utter_invoice_pending_info
+    - action: action_handle_payment_response
+
+- rule: Activate deny identity flow
+  steps:
+    - intent: deny_identity
+    - action: action_check_identity
+    - action: utter_wrong_person
+
+- rule: Activate can pay flow
+  steps:
+    - intent: can_pay
+    - action: action_handle_payment_response
+
+- rule: Activate cannot pay flow
+  steps:
+    - intent: cannot_pay
+    - action: action_handle_payment_response
+
+- rule: Activate ask invoice date flow
+  steps:
+    - intent: ask_invoice_date
+    - action: action_handle_payment_response
+
+- rule: Activate payment date response flow
+  steps:
+    - intent: payment_date_response
+    - action: action_handle_date_question
+
+- rule: Activate financial difficulty flow
+  steps:
+    - intent: financial_difficulty
+    - action: action_classify_reason
+
+- rule: Activate payment dispute flow
+  steps:
+    - intent: payment_dispute
+    - action: action_classify_reason
+
+- rule: Fallback for unknown responses
+  steps:
+    - or:
+        - intent: nlu_fallback
+        - intent: out_of_scope
+    - action: utter_free_chitchat_response 

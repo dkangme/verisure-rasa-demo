@@ -1,0 +1,161 @@
+version: "3.1"
+
+nlu:
+- intent: start
+  examples: |
+    - hola
+    - buenos días
+    - buenas tardes
+    - hey
+    - hello
+    - hi
+    - inicio
+    - comenzar
+    - empezar
+    - start
+    - iniciar
+    - buenas
+    - saludos
+    - qué tal
+    - que tal
+    - cómo estás
+    - como estas
+
+- intent: confirm_identity
+  examples: |
+    - correcto
+    - correct
+    - soy dennis
+    - soy dennis kangme
+    - habla con dennis
+    - con dennis
+    - dennis kangme
+    - dennis
+    - soy [nombre]
+    - habla con [nombre]
+    - con [nombre]
+    - [nombre] kangme
+    - [nombre]
+    - sí soy
+    - si soy
+    - yes soy
+    - confirmo
+    - es correcto
+    - sí
+    - si
+    - yes
+    - correcto
+    - es correcto
+    - confirmo que soy
+    - sí es correcto
+    - si es correcto
+
+- intent: deny_identity
+  examples: |
+    - no soy dennis
+    - no es dennis
+    - no habla con dennis
+    - no soy esa persona
+    - no es correcto
+    - incorrecto
+    - no soy [nombre]
+    - no es [nombre]
+    - no habla con [nombre]
+    - no
+    - no soy
+    - no es
+
+- intent: can_pay
+  examples: |
+    - sí puedo pagar
+    - si puedo pagar
+    - puedo pagar
+    - claro que sí
+    - claro que si
+    - puedo
+    - claro
+    - sí pagar
+    - si pagar
+    - yes puedo
+    - confirmo pago
+
+- intent: cannot_pay
+  examples: |
+    - no puedo pagar
+    - no puedo
+    - no tengo dinero
+    - no tengo plata
+    - no tengo fondos
+    - no tengo recursos
+    - no tengo capacidad
+    - no pagar
+    - no puedo pagar ahora
+
+- intent: ask_invoice_date
+  examples: |
+    - de qué fecha es esta factura
+    - de que fecha es esta factura
+    - cuándo es la factura
+    - cuando es la factura
+    - qué fecha es la factura
+    - que fecha es la factura
+    - fecha de la factura
+    - cuándo vence
+    - cuando vence
+    - fecha de vencimiento
+
+- intent: financial_difficulty
+  examples: |
+    - estoy sin dinero hasta fin de mes
+    - estoy cesante
+    - estoy enfermo
+    - estoy desempleado
+    - no tengo trabajo
+    - estoy sin trabajo
+    - no tengo ingresos
+    - estoy en dificultades económicas
+    - tengo problemas financieros
+    - no tengo capacidad de pago
+
+- intent: payment_dispute
+  examples: |
+    - ya la pagué
+    - ya pagué
+    - ya pague
+    - no es mi deuda
+    - no debo
+    - no es mi factura
+    - ya cancelé
+    - ya cancelé la factura
+    - ya pagué esa factura
+    - no es mi responsabilidad 
+
+- intent: payment_date_response
+  examples: |
+    - mañana
+    - tomorrow
+    - el próximo jueves
+    - el proximo jueves
+    - el viernes
+    - el lunes que viene
+    - el lunes
+    - el martes
+    - el miércoles
+    - el miercoles
+    - el jueves
+    - el viernes
+    - el sábado
+    - el sabado
+    - el domingo
+    - fin de mes
+    - final de mes
+    - próximo mes
+    - proximo mes
+    - el 15
+    - el 20
+    - el 25
+    - 15/08
+    - 20-08
+    - a fin de mes
+    - el próximo lunes
+    - el proximo lunes 
