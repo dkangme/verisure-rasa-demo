@@ -46,6 +46,11 @@ rules:
     - intent: payment_date_response
     - action: action_handle_date_question
 
+- rule: Activate invoice date info flow
+  steps:
+    - action: action_get_invoice_date_info
+    - action: utter_ask_reason
+
 - rule: Activate financial difficulty flow
   steps:
     - intent: financial_difficulty

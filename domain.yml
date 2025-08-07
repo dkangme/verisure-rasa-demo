@@ -95,3 +95,4 @@ actions:
   - action_classify_reason
   - action_check_sufficient_funds
   - action_get_pending_invoices_info
+  - action_get_invoice_date_info

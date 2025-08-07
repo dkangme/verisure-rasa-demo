@@ -119,8 +119,8 @@ class ActionHandlePaymentResponse(Action):
         elif cannot_pay:
             dispatcher.utter_message(response="utter_ask_reason")
         elif ask_date:
-            dispatcher.utter_message(response="utter_invoice_date_info")
-            dispatcher.utter_message(response="utter_ask_reason")
+            # Use the new action to get dynamic invoice date info
+            return [FollowupAction("action_get_invoice_date_info")]
         else:
             # Default to asking for payment date
             dispatcher.utter_message(response="utter_ask_payment_date")
@@ -473,6 +473,87 @@ class ActionGetPendingInvoicesInfo(Action):
             ]
 
 
+class ActionGetInvoiceDateInfo(Action):
+    def name(self) -> Text:
+        return "action_get_invoice_date_info"
+
+    def format_date_spanish(self, date_str: str) -> str:
+        """Format date in Spanish format"""
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            months = {
+                1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio',
+                7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre'
+            }
+            return f"{date_obj.day} de {months[date_obj.month]} de {date_obj.year}"
+        except:
+            return date_str
+
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> List[Dict[Text, Any]]:
+        client_name = tracker.get_slot("client_name") or "Dennis Kangme"
+        print(f"DEBUG: ActionGetInvoiceDateInfo called for client: {client_name}")
+        
+        try:
+            connection = get_database_connection()
+            if connection:
+                cursor = connection.cursor()
+                
+                # Get the most recent pending invoice for the customer
+                query = """
+                SELECT i.issue_date, i.due_date, i.invoice_number
+                FROM invoices i
+                JOIN customers c ON i.customer_id = c.id
+                WHERE c.name = %s AND i.status = 'pending' AND i.payment_date IS NULL
+                ORDER BY i.due_date ASC
+                LIMIT 1
+                """
+                
+                print(f"DEBUG: Executing invoice date query for client: {client_name}")
+                cursor.execute(query, (client_name,))
+                result = cursor.fetchone()
+                print(f"DEBUG: Invoice date query result: {result}")
+                
+                cursor.close()
+                connection.close()
+                
+                if result:
+                    issue_date, due_date, invoice_number = result
+                    
+                    # Format dates in Spanish
+                    formatted_issue_date = self.format_date_spanish(str(issue_date))
+                    formatted_due_date = self.format_date_spanish(str(due_date))
+                    
+                    # Create dynamic response
+                    response_text = f"La factura {invoice_number} fue emitida el {formatted_issue_date} con fecha de vencimiento {formatted_due_date}."
+                    
+                    print(f"DEBUG: Generated response: {response_text}")
+                    
+                    # Log the interaction
+                    self.log_interaction(tracker, "invoice_date_info", f"issue_date={issue_date}, due_date={due_date}")
+                    
+                    # Send the response directly
+                    dispatcher.utter_message(text=response_text)
+                    
+                    return []
+                else:
+                    # No pending invoices found, use default response
+                    print(f"DEBUG: No pending invoices found for {client_name}, using default response")
+                    self.log_interaction(tracker, "invoice_date_info", "no_pending_invoices")
+                    dispatcher.utter_message(response="utter_invoice_date_info")
+                    return []
+                    
+        except Exception as e:
+            print(f"DEBUG: Error getting invoice date info: {e}")
+            # Fallback to default response
+            dispatcher.utter_message(response="utter_invoice_date_info")
+            return []
+
+
 def get_database_connection():
     """Get database connection using environment variables"""
     try:
@@ -530,3 +611,4 @@ ActionHandleDateQuestion.log_interaction = staticmethod(log_interaction)
 ActionClassifyReason.log_interaction = staticmethod(log_interaction)
 ActionCheckSufficientFunds.log_interaction = staticmethod(log_interaction)
 ActionGetPendingInvoicesInfo.log_interaction = staticmethod(log_interaction)
+ActionGetInvoiceDateInfo.log_interaction = staticmethod(log_interaction)
