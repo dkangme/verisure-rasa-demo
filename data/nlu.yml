@@ -20,6 +20,14 @@ nlu:
     - que tal
     - cómo estás
     - como estas
+    - hola soy [Dennis](client_name)
+    - hola soy [Dennis Kangme](client_name)
+    - hola me llamo [Dennis](client_name)
+    - hola soy [Juan](client_name)
+    - hola soy [María](client_name)
+    - hola soy [Carlos](client_name)
+    - hola soy [Ana](client_name)
+    - hola soy [Luis](client_name)
 
 - intent: confirm_identity
   examples: |
@@ -31,11 +39,17 @@ nlu:
     - con dennis
     - dennis kangme
     - dennis
-    - soy [nombre]
-    - habla con [nombre]
-    - con [nombre]
-    - [nombre] kangme
-    - [nombre]
+    - soy [Dennis](client_name)
+    - soy [Dennis Kangme](client_name)
+    - habla con [Dennis](client_name)
+    - con [Dennis](client_name)
+    - [Dennis](client_name) kangme
+    - [Dennis](client_name)
+    - soy [Juan](client_name)
+    - soy [María](client_name)
+    - soy [Carlos](client_name)
+    - soy [Ana](client_name)
+    - soy [Luis](client_name)
     - sí soy
     - si soy
     - yes soy
@@ -58,9 +72,12 @@ nlu:
     - no soy esa persona
     - no es correcto
     - incorrecto
-    - no soy [nombre]
-    - no es [nombre]
-    - no habla con [nombre]
+    - no soy [Dennis](client_name)
+    - no es [Dennis](client_name)
+    - no habla con [Dennis](client_name)
+    - no soy [Juan](client_name)
+    - no es [María](client_name)
+    - no habla con [Carlos](client_name)
     - no
     - no soy
     - no es
@@ -158,4 +175,17 @@ nlu:
     - 20-08
     - a fin de mes
     - el próximo lunes
-    - el proximo lunes 
+    - el proximo lunes
+
+- intent: EXTERNAL_init_context
+  examples: |
+    - EXTERNAL_init_context
+    - external init context
+    - external_init_context
+    - init context external
+    - context external init
+    - external context initialization
+    - initialize external context
+    - external context init
+    - init external context
+    - context init external 
