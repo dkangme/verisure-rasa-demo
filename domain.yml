@@ -1,35 +1,83 @@
 version: "3.1"
 
+intents:
+  - start
+  - confirm_identity
+  - deny_identity
+  - can_pay
+  - cannot_pay
+  - ask_invoice_date
+  - payment_date_response
+  - financial_difficulty
+  - payment_dispute
+  - nlu_fallback
+  - out_of_scope
+
 slots:
-  recipient:
+  client_name:
     type: text
     mappings:
       - type: from_llm
-  amount:
-    type: float
+  is_dennis:
+    type: bool
+    mappings:
+      - type: from_llm
+  payment_response:
+    type: text
+    mappings:
+      - type: from_llm
+  payment_date:
+    type: text
+    mappings:
+      - type: from_llm
+  reason_type:
+    type: text
+    mappings:
+      - type: from_llm
+  invoice_date:
+    type: text
     mappings:
       - type: from_llm
 
 responses:
-  utter_ask_recipient:
-    - text: "Who would you like to send money to?"
+  utter_greeting_and_identity_check:
+    - text: "Hola soy veriBot el asistente digital de Verisure. Quisiera entregarle información importante de sus facturas, ¿hablo con {client_name}?"
 
-  utter_ask_amount:
-    - text: "How much money would you like to send?"
+  utter_wrong_person:
+    - text: "Lamento molestarlo, registraré en nuestros sistemas esta información. Que tenga un buen día."
 
-  utter_transfer_complete:
-    - text: "All done. {amount} has been sent to {recipient}."
+  utter_invoice_pending_info:
+    - text: "Buenos días don {client_name}, le informo que tiene pendiente de pago una factura por un monto de $55.000. Quisiera saber si podrá pagarla dentro de los siguientes 5 días."
+
+  utter_ask_payment_date:
+    - text: "¿Me puede indicar la fecha que con seguridad pagará la factura?"
+
+  utter_payment_confirmed:
+    - text: "Perfecto don {client_name}, registro {payment_date} como su día de pago. Que tenga buen día."
+
+  utter_ask_reason:
+    - text: "¿Me puede indicar la razón por la que no puede pagar la factura?"
+
+  utter_invoice_date_info:
+    - text: "La factura fue emitida el 1 de mayo de 2025 con fecha de vencimiento 23 de mayo de 2025."
+
+  utter_financial_difficulty:
+    - text: "Don {client_name}, lamento escuchar esto. Si lo desea puede comunicarse con nosotros al 600 700 7000 para escuchar otras formas de ponerse al día con su cuenta. Que tenga un buen día."
+
+  utter_payment_dispute:
+    - text: "Perfecto don {client_name}, registraré esta información para verificar en nuestros sistemas. Lamento esta situación. Que tenga buen día."
+
+  utter_final_response:
+    - text: "Gracias por su tiempo. Que tenga un buen día."
 
   utter_free_chitchat_response:
-    - text: "placeholder"
-      metadata:
-        rephrase: True
-        rephrase_prompt: |
-          The following is a conversation with an AI assistant built with Rasa.
-          The assistant can help the user transfer money.
-          The assistant is helpful, creative, clever, and very friendly.
-          The user is making small talk, and the assistant should respond, keeping things light.
-          Context / previous conversation with the user:
-          {{history}}
-          {{current_input}}
-          Suggested AI Response:
+    - text: "Hola, soy veriBot el asistente digital de Verisure. ¿En qué puedo ayudarle hoy?"
+
+actions:
+  - action_extract_client_name
+  - action_check_identity
+  - action_handle_identity_response
+  - action_handle_payment_response
+  - action_handle_date_question
+  - action_classify_reason
+  - action_check_sufficient_funds

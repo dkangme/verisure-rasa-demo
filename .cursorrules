@@ -1,0 +1,260 @@
+# Verisure Billing Assistant - Project Intelligence
+
+## Project Overview
+This is a Rasa-based conversational AI demo for Verisure's billing department. The bot handles customer interactions regarding pending invoices, payment scheduling, and dispute resolution.
+
+## Key Technical Patterns
+
+### 1. Rasa Configuration
+- **CALM Disabled**: Prevents interference with rule/flow execution
+- **Policies**: FlowPolicy + RulePolicy (no CALM)
+- **Actions**: Custom Python actions for business logic
+- **Database**: MariaDB with mysql.connector-python
+
+### 2. Database Integration Pattern
+```python
+# Standard pattern for database operations
+connection = get_database_connection()
+cursor = connection.cursor()
+cursor.execute(query, params)
+connection.commit()
+cursor.close()
+connection.close()
+```
+
+### 3. Custom Action Pattern
+```python
+class ActionHandleDateQuestion(Action):
+    def run(self, dispatcher, tracker, domain):
+        # 1. Extract user input
+        # 2. Process with business logic
+        # 3. Update database
+        # 4. Log interaction
+        # 5. Send response
+```
+
+### 4. Date Processing Pattern
+- **Input**: Relative dates like "mañana", "el próximo jueves"
+- **Processing**: Convert to YYYY-MM-DD format
+- **Output**: Spanish format like "viernes 8 de agosto"
+- **Storage**: Update invoices table with payment_date
+
+### 5. Intent Recognition Patterns
+- **start**: "hola" triggers conversation
+- **confirm_identity**: "sí", "si", "yes" for identity confirmation
+- **payment_date_response**: Date expressions for scheduling
+- **financial_difficulty**: Payment inability reasons
+- **payment_dispute**: Dispute reasons
+
+## File Structure and Dependencies
+
+### Core Files
+- `domain.yml`: Central configuration (intents, slots, responses, actions)
+- `config.yml`: Rasa pipeline and policies
+- `data/flows.yml`: Conversation flows
+- `data/rules.yml`: Conversation rules
+- `data/nlu.yml`: Training examples
+- `actions/actions.py`: Custom business logic
+- `database_config.py`: Database setup and schema
+
+### Database Schema
+```sql
+-- Three main tables
+customers (id, name, email, phone, created_at)
+invoices (id, customer_id, invoice_number, amount, issue_date, due_date, status, payment_date, created_at)
+interactions (id, session_id, customer_id, interaction_type, data, timestamp)
+```
+
+## Common Issues and Solutions
+
+### 1. Flow Activation Issues
+- **Problem**: Bot doesn't follow expected conversation path
+- **Solution**: Check rules.yml and flows.yml for proper intent mapping
+- **Prevention**: Disable CALM to prevent interference
+
+### 2. Database Connection Errors
+- **Problem**: ModuleNotFoundError for mysql.connector-python
+- **Solution**: Install with `pip install mysql-connector-python`
+- **Prevention**: Include in requirements.txt
+
+### 3. Date Processing Issues
+- **Problem**: Relative dates not converted properly
+- **Solution**: Check convert_relative_date() method in ActionHandleDateQuestion
+- **Prevention**: Add comprehensive date pattern examples in nlu.yml
+
+### 4. Slot Management Issues
+- **Problem**: Slots not persisting across conversation turns
+- **Solution**: Ensure proper SlotSet() returns in custom actions
+- **Prevention**: Use custom slot mappings in domain.yml
+
+## Development Workflow
+
+### 1. Making Changes
+1. **Edit Code**: Modify actions, flows, or rules
+2. **Train Model**: `rasa train`
+3. **Restart Actions**: `pkill -f "rasa run actions" && rasa run actions`
+4. **Test**: `rasa shell`
+
+### 2. Database Changes
+1. **Schema Updates**: Modify database_config.py
+2. **Run Setup**: `python database_config.py`
+3. **Verify**: Check tables and data
+
+### 3. Testing Patterns
+```bash
+# Manual testing
+source .venv/bin/activate
+rasa shell
+
+# Database verification
+mysql -u root -e "USE verisure_demo; SELECT * FROM invoices;"
+
+# Action server
+source .venv/bin/activate
+rasa run actions
+```
+
+## Key Implementation Details
+
+### 1. Spanish Date Formatting
+```python
+def format_date_spanish(self, date_str: str) -> str:
+    # Convert YYYY-MM-DD to "viernes 8 de agosto"
+    # Uses Spanish day and month names
+```
+
+### 2. Relative Date Processing
+```python
+def convert_relative_date(self, date_text: str) -> str:
+    # Handles: mañana, el próximo jueves, fin de mes, 15/08
+    # Returns: YYYY-MM-DD format
+```
+
+### 3. Database Logging
+```python
+def log_interaction(tracker: Tracker, interaction_type: str, data: str = None):
+    # Logs all interactions to interactions table
+    # Includes session_id, interaction_type, and data
+```
+
+## Environment Setup
+
+### Required Environment Variables
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=verisure_demo
+OPENAI_API_KEY=your_openai_api_key
+RASA_TOKEN=your_rasa_token
+```
+
+### Virtual Environment
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Testing Strategy
+
+### 1. Conversation Flow Testing
+- **Start**: "hola"
+- **Identity**: "sí"
+- **Payment**: "puedo pagar"
+- **Date**: "el próximo lunes"
+- **Expected**: "Perfecto don Dennis, registro lunes 11 de agosto como su día de pago"
+
+### 2. Database Verification
+```sql
+-- Check invoice updates
+SELECT * FROM invoices ORDER BY id DESC;
+
+-- Check interaction logs
+SELECT * FROM interactions ORDER BY id DESC LIMIT 5;
+```
+
+### 3. Error Handling Testing
+- **Unrecognized Input**: Should trigger fallback
+- **Database Errors**: Should log error and continue
+- **Date Parsing Errors**: Should store original text
+
+## Performance Considerations
+
+### 1. Database Optimization
+- **Connection Management**: Close connections after use
+- **Query Optimization**: Use indexed columns for lookups
+- **Error Handling**: Graceful fallback for connection issues
+
+### 2. Rasa Performance
+- **Model Training**: Regular retraining with new data
+- **Intent Recognition**: Optimized training examples
+- **Action Response Time**: Efficient custom actions
+
+## Security Considerations
+
+### 1. Database Security
+- **Credentials**: Stored in environment variables
+- **Connection**: Use SSL/TLS in production
+- **Access Control**: Limited database user permissions
+
+### 2. Input Validation
+- **Date Parsing**: Validate date inputs
+- **SQL Injection**: Use parameterized queries
+- **Error Messages**: Don't expose sensitive information
+
+## Maintenance Patterns
+
+### 1. Regular Tasks
+- **Model Retraining**: When adding new intents/examples
+- **Database Backup**: Regular backups of customer data
+- **Log Analysis**: Review interaction logs for improvements
+
+### 2. Monitoring
+- **Action Server**: Check if running on port 5055
+- **Database**: Verify MariaDB is running
+- **Conversation Quality**: Review fallback rates
+
+## Project Evolution
+
+### 1. Completed Features
+- ✅ Core conversation flow
+- ✅ Database integration
+- ✅ Date processing and formatting
+- ✅ Spanish language support
+- ✅ Interaction logging
+
+### 2. Future Enhancements
+- 🔄 More date patterns
+- 🔄 Enhanced error handling
+- 🔄 Performance optimization
+- 🔄 Analytics dashboard
+
+## Quick Reference
+
+### Common Commands
+```bash
+# Start action server
+source .venv/bin/activate && rasa run actions
+
+# Test bot
+source .venv/bin/activate && rasa shell
+
+# Train model
+rasa train
+
+# Check database
+mysql -u root -e "USE verisure_demo; SELECT * FROM invoices;"
+```
+
+### Key Files
+- `actions/actions.py`: Business logic
+- `domain.yml`: Configuration
+- `data/rules.yml`: Conversation rules
+- `database_config.py`: Database setup
+
+### Important Slots
+- `client_name`: Customer name
+- `payment_date`: Scheduled payment date
+- `is_dennis`: Identity confirmation
+- `payment_response`: Payment ability response 
