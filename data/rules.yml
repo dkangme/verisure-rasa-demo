@@ -11,12 +11,12 @@ rules:
     - action: utter_greeting_and_identity_check
     - action: action_extract_client_name
     - action: action_check_identity
-    - action: action_handle_identity_response
 
 - rule: Activate confirm identity flow
   steps:
     - intent: confirm_identity
     - action: action_check_identity
+    - action: action_get_pending_invoices_info
     - action: utter_invoice_pending_info
     - action: action_handle_payment_response
 

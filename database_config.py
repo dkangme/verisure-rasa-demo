@@ -40,8 +40,9 @@ def create_database_and_tables():
                 amount DECIMAL(10,2) NOT NULL,
                 issue_date DATE NOT NULL,
                 due_date DATE NOT NULL,
-                status ENUM('pending', 'paid', 'overdue') DEFAULT 'pending',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status ENUM('pending', 'paid', 'payment_scheduled', 'disputed') DEFAULT 'pending',
+                payment_date DATE NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (customer_id) REFERENCES customers(id)
             )
             """

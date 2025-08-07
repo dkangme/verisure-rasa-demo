@@ -20,26 +20,22 @@ class ActionExtractClientName(Action):
         tracker: Tracker,
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
-        # Get the latest message from the user
         latest_message = tracker.latest_message.get('text', '').lower()
         
-        # Look for patterns like "soy [nombre]", "hablo con [nombre]", etc.
-        name_patterns = [
-            r'soy\s+([a-zA-Z\s]+)',
-            r'habla\s+con\s+([a-zA-Z\s]+)',
-            r'con\s+([a-zA-Z\s]+)',
-            r'([a-zA-Z\s]+)\s+kangme',
-            r'([a-zA-Z\s]+)'
-        ]
+        # Try to extract name from the message
+        name_pattern = r'soy\s+([a-zA-Z\s]+)'
+        match = re.search(name_pattern, latest_message)
         
-        for pattern in name_patterns:
-            match = re.search(pattern, latest_message)
-            if match:
-                name = match.group(1).strip().title()
-                return [SlotSet("client_name", name)]
+        if match:
+            client_name = match.group(1).strip().title()
+        else:
+            # Default to Dennis Kangme if no name found
+            client_name = "Dennis Kangme"
         
-        # If no name found, use default
-        return [SlotSet("client_name", "Dennis")]
+        # Log the interaction
+        self.log_interaction(tracker, "client_name_extracted", client_name)
+        
+        return [SlotSet("client_name", client_name)]
 
 
 class ActionCheckIdentity(Action):
@@ -289,29 +285,29 @@ class ActionHandleDateQuestion(Action):
             return [SlotSet("payment_date", latest_message)]
 
     def update_invoice_payment_date(self, tracker: Tracker, payment_date: str):
-        """Update the invoice in the database with the payment date"""
+        """Update ALL pending invoices in the database with the payment date"""
         try:
             connection = get_database_connection()
             if connection:
                 cursor = connection.cursor()
                 
-                # Update the invoice with the payment date
+                # Update ALL pending invoices with the payment date
                 update_query = """
                 UPDATE invoices 
                 SET payment_date = %s, status = 'payment_scheduled'
                 WHERE customer_id = (SELECT id FROM customers WHERE name = %s)
                 AND status = 'pending'
-                ORDER BY due_date ASC
-                LIMIT 1
+                AND payment_date IS NULL
                 """
                 
                 client_name = tracker.get_slot("client_name") or "Dennis Kangme"
                 cursor.execute(update_query, (payment_date, client_name))
+                rows_updated = cursor.rowcount
                 connection.commit()
                 cursor.close()
                 connection.close()
                 
-                print(f"Updated invoice payment date to {payment_date} for {client_name}")
+                print(f"Updated {rows_updated} invoices with payment date {payment_date} for {client_name}")
                 
         except Exception as e:
             print(f"Error updating invoice payment date: {e}")
@@ -328,7 +324,7 @@ class ActionClassifyReason(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict[Text, Any]]:
         latest_message = tracker.latest_message.get('text', '').lower()
-        client_name = tracker.get_slot("client_name") or "Dennis"
+        client_name = tracker.get_slot("client_name") or "Dennis Kangme"
         
         # Classify the reason type
         financial_difficulty = any(word in latest_message for word in 
@@ -342,6 +338,8 @@ class ActionClassifyReason(Action):
             dispatcher.utter_message(response="utter_financial_difficulty", client_name=client_name)
         elif payment_dispute:
             reason_type = "payment_dispute"
+            # Update invoice status to disputed
+            self.update_invoice_dispute_status(tracker)
             dispatcher.utter_message(response="utter_payment_dispute", client_name=client_name)
         else:
             reason_type = "other"
@@ -351,6 +349,34 @@ class ActionClassifyReason(Action):
         self.log_interaction(tracker, "reason_classified", reason_type)
         
         return [SlotSet("reason_type", reason_type)]
+
+    def update_invoice_dispute_status(self, tracker: Tracker):
+        """Update ALL pending invoices to disputed status"""
+        try:
+            connection = get_database_connection()
+            if connection:
+                cursor = connection.cursor()
+                
+                # Update ALL pending invoices to disputed status
+                update_query = """
+                UPDATE invoices 
+                SET status = 'disputed'
+                WHERE customer_id = (SELECT id FROM customers WHERE name = %s)
+                AND status = 'pending'
+                AND payment_date IS NULL
+                """
+                
+                client_name = tracker.get_slot("client_name") or "Dennis Kangme"
+                cursor.execute(update_query, (client_name,))
+                rows_updated = cursor.rowcount
+                connection.commit()
+                cursor.close()
+                connection.close()
+                
+                print(f"Updated {rows_updated} invoices to disputed status for {client_name}")
+                
+        except Exception as e:
+            print(f"Error updating invoice dispute status: {e}")
 
 
 class ActionCheckSufficientFunds(Action):
@@ -368,6 +394,75 @@ class ActionCheckSufficientFunds(Action):
         transfer_amount = tracker.get_slot("amount")
         has_sufficient_funds = transfer_amount <= balance
         return [SlotSet("has_sufficient_funds", has_sufficient_funds)]
+
+
+class ActionGetPendingInvoicesInfo(Action):
+    def name(self) -> Text:
+        return "action_get_pending_invoices_info"
+
+    def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> List[Dict[Text, Any]]:
+        client_name = tracker.get_slot("client_name") or "Dennis Kangme"
+        print(f"DEBUG: ActionGetPendingInvoicesInfo called for client: {client_name}")
+        
+        try:
+            connection = get_database_connection()
+            if connection:
+                cursor = connection.cursor()
+                
+                # Get pending invoices for the customer
+                query = """
+                SELECT COUNT(*) as invoice_count, SUM(amount) as total_amount
+                FROM invoices i
+                JOIN customers c ON i.customer_id = c.id
+                WHERE c.name = %s AND i.status = 'pending' AND i.payment_date IS NULL
+                """
+                
+                print(f"DEBUG: Executing query with client_name: {client_name}")
+                cursor.execute(query, (client_name,))
+                result = cursor.fetchone()
+                print(f"DEBUG: Query result: {result}")
+                
+                cursor.close()
+                connection.close()
+                
+                if result and result[0] > 0:
+                    invoice_count = result[0]
+                    total_amount = float(result[1]) if result[1] else 0.0
+                    
+                    # Format the total amount as a string with proper formatting
+                    formatted_total = f"${total_amount:,.0f}"
+                    
+                    print(f"DEBUG: Found {invoice_count} invoices, total: {formatted_total}")
+                    
+                    # Log the interaction
+                    self.log_interaction(tracker, "pending_invoices_info", f"count={invoice_count}, total={total_amount}")
+                    
+                    # Set slots with the information
+                    return [
+                        SlotSet("pending_invoice_count", str(invoice_count)),
+                        SlotSet("pending_invoice_total", formatted_total)
+                    ]
+                else:
+                    # No pending invoices found
+                    print(f"DEBUG: No pending invoices found for {client_name}")
+                    self.log_interaction(tracker, "pending_invoices_info", "no_pending_invoices")
+                    return [
+                        SlotSet("pending_invoice_count", "0"),
+                        SlotSet("pending_invoice_total", "$0")
+                    ]
+                    
+        except Exception as e:
+            print(f"DEBUG: Error getting pending invoices info: {e}")
+            # Fallback to default values
+            return [
+                SlotSet("pending_invoice_count", "1"),
+                SlotSet("pending_invoice_total", "$55,000")
+            ]
 
 
 def get_database_connection():
@@ -426,3 +521,4 @@ ActionHandlePaymentResponse.log_interaction = staticmethod(log_interaction)
 ActionHandleDateQuestion.log_interaction = staticmethod(log_interaction)
 ActionClassifyReason.log_interaction = staticmethod(log_interaction)
 ActionCheckSufficientFunds.log_interaction = staticmethod(log_interaction)
+ActionGetPendingInvoicesInfo.log_interaction = staticmethod(log_interaction)

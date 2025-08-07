@@ -17,27 +17,35 @@ slots:
   client_name:
     type: text
     mappings:
-      - type: from_llm
+    - type: custom
   is_dennis:
     type: bool
     mappings:
-      - type: from_llm
+    - type: custom
   payment_response:
     type: text
     mappings:
-      - type: from_llm
+    - type: custom
   payment_date:
     type: text
     mappings:
-      - type: from_llm
+    - type: custom
   reason_type:
     type: text
     mappings:
-      - type: from_llm
+    - type: custom
   invoice_date:
     type: text
     mappings:
-      - type: from_llm
+    - type: custom
+  pending_invoice_count:
+    type: text
+    mappings:
+    - type: custom
+  pending_invoice_total:
+    type: text
+    mappings:
+    - type: custom
 
 responses:
   utter_greeting_and_identity_check:
@@ -47,7 +55,7 @@ responses:
     - text: "Lamento molestarlo, registraré en nuestros sistemas esta información. Que tenga un buen día."
 
   utter_invoice_pending_info:
-    - text: "Buenos días don {client_name}, le informo que tiene pendiente de pago una factura por un monto de $55.000. Quisiera saber si podrá pagarla dentro de los siguientes 5 días."
+    - text: "Buenos días don {client_name}, le informo que tiene {pending_invoice_count} factura(s) pendiente(s) de pago por un monto total de {pending_invoice_total}. Quisiera saber si podrá pagarla(s) dentro de los siguientes 5 días."
 
   utter_ask_payment_date:
     - text: "¿Me puede indicar la fecha que con seguridad pagará la factura?"
@@ -81,3 +89,4 @@ actions:
   - action_handle_date_question
   - action_classify_reason
   - action_check_sufficient_funds
+  - action_get_pending_invoices_info
