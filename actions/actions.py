@@ -22,7 +22,15 @@ class ActionExtractClientName(Action):
     ) -> List[Dict[Text, Any]]:
         latest_message = tracker.latest_message.get('text', '').lower()
         
-        # Try to extract name from the message
+        # First, try to get the client_name from extracted entities
+        entities = tracker.latest_message.get('entities', [])
+        for entity in entities:
+            if entity['entity'] == 'client_name':
+                client_name = entity['value'].strip().title()
+                self.log_interaction(tracker, "client_name_extracted_from_entity", client_name)
+                return [SlotSet("client_name", client_name)]
+        
+        # If no entity found, try to extract name from the message using regex
         name_pattern = r'soy\s+([a-zA-Z\s]+)'
         match = re.search(name_pattern, latest_message)
         
@@ -33,7 +41,7 @@ class ActionExtractClientName(Action):
             client_name = "Dennis Kangme"
         
         # Log the interaction
-        self.log_interaction(tracker, "client_name_extracted", client_name)
+        self.log_interaction(tracker, "client_name_extracted_from_text", client_name)
         
         return [SlotSet("client_name", client_name)]
 

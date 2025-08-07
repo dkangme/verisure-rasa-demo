@@ -12,12 +12,17 @@ intents:
   - payment_dispute
   - nlu_fallback
   - out_of_scope
+  - EXTERNAL_init_context
+
+entities:
+  - client_name
 
 slots:
   client_name:
     type: text
     mappings:
-    - type: custom
+    - type: from_entity
+      entity: client_name
   is_dennis:
     type: bool
     mappings:

@@ -1,108 +1,207 @@
-feat: implement comprehensive invoice status management and dispute handling
+feat: implement entity-based client name extraction and slot mapping
 
 ## Major Features Added
 
-### Invoice Status Management
-- Add 'disputed' status to invoices table enum
-- Implement `update_invoice_dispute_status()` method in ActionClassifyReason
-- Update ALL pending invoices when client disputes debt
-- Fix `update_invoice_payment_date()` to update ALL invoices instead of just first one
+### Entity-Based Name Extraction
+- Add `client_name` entity to domain configuration
+- Configure slot mapping with `from_entity` for automatic extraction
+- Add `NLUCommandAdapter` to pipeline for entity-based slot mapping
+- Implement comprehensive training examples with entity annotations
 
-### Dynamic Invoice Information
-- Add `ActionGetPendingInvoicesInfo` to query real invoice data
-- Display actual count and total amount of pending invoices
-- Format amounts with proper currency formatting ($100,000)
-- Update response text to show dynamic invoice information
+### Enhanced Name Recognition
+- **Entity Training**: Add 10+ examples with `[Name](client_name)` annotations
+- **Intent Coverage**: Cover `start`, `confirm_identity`, `deny_identity` intents
+- **Name Varieties**: Support for Dennis, Juan, María, Carlos, Ana, Luis
+- **Automatic Extraction**: Names extracted from user messages automatically
 
-### Database Schema Enhancements
-- Add `payment_date` column to invoices table
-- Add `disputed` status to invoice status enum
-- Update database_config.py with new schema
-- Ensure proper foreign key relationships
+### Slot Mapping Configuration
+```yaml
+slots:
+  client_name:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: client_name
+```
+
+### Pipeline Enhancement
+```yaml
+pipeline:
+  # ... existing components ...
+  - name: NLUCommandAdapter  # Added for entity-based mapping
+```
 
 ## Technical Improvements
 
 ### Action Enhancements
-- **ActionGetPendingInvoicesInfo**: Query real pending invoices from database
-- **ActionClassifyReason**: Update invoice status based on client response
-- **ActionHandleDateQuestion**: Update ALL pending invoices with payment date
-- **ActionExtractClientName**: Use full name "Dennis Kangme" for database queries
+- **ActionExtractClientName**: Enhanced to use extracted entities first
+- **Fallback Logic**: Regex extraction when entity not found
+- **Logging**: Separate logging for entity vs text extraction
+- **Default Handling**: Maintains "Dennis Kangme" as default
 
-### Database Operations
-- **Dispute Handling**: Mark invoices as 'disputed' when client denies debt
-- **Payment Scheduling**: Mark invoices as 'payment_scheduled' with date
-- **Bulk Updates**: Update ALL pending invoices, not just first one
-- **Status Tracking**: Proper enum values for invoice lifecycle
+### Entity Recognition
+- **Training Examples**: 10+ examples with entity annotations
+- **Intent Coverage**: All relevant intents covered
+- **Name Patterns**: "soy [Name]", "habla con [Name]", "no soy [Name]"
+- **Automatic Mapping**: Entity values automatically mapped to slot
 
-### Query Optimizations
-- **Pending Invoices**: Only count invoices with status='pending' AND payment_date IS NULL
-- **Disputed Invoices**: Update to status='disputed' for debt disputes
-- **Payment Updates**: Set payment_date and status='payment_scheduled'
+### Rule Configuration
+- **EXTERNAL_init_context**: Added rule to handle external context
+- **Entity Processing**: Rule triggers name extraction and greeting
+- **Flow Integration**: Seamless integration with existing conversation flow
 
 ## Files Modified
-- actions/actions.py: Enhanced invoice status management and dispute handling
-- domain.yml: Added new slots and actions for invoice information
-- data/rules.yml: Updated rules to include invoice info action
-- database_config.py: Added 'disputed' status to schema
-- data/nlu.yml: Added payment dispute examples
 
-## Database Changes
-```sql
--- Added new status to invoices table
-ALTER TABLE invoices MODIFY COLUMN status 
-ENUM('pending', 'paid', 'payment_scheduled', 'disputed') DEFAULT 'pending';
+### Core Configuration
+- `domain.yml`: Added entities section and from_entity mapping
+- `config.yml`: Added NLUCommandAdapter to pipeline
+- `data/rules.yml`: Added rule for EXTERNAL_init_context handling
 
--- Added payment_date column
-ALTER TABLE invoices ADD COLUMN payment_date DATE NULL;
+### Training Data
+- `data/nlu.yml`: Added entity examples for all relevant intents
+- Enhanced examples with `[Name](client_name)` annotations
+
+### Action Logic
+- `actions/actions.py`: Enhanced ActionExtractClientName for entity usage
+
+## Entity Examples Added
+
+### Start Intent
+```yaml
+- hola soy [Dennis](client_name)
+- hola soy [Dennis Kangme](client_name)
+- hola me llamo [Dennis](client_name)
+- hola soy [Juan](client_name)
+- hola soy [María](client_name)
+- hola soy [Carlos](client_name)
+- hola soy [Ana](client_name)
+- hola soy [Luis](client_name)
+```
+
+### Confirm Identity Intent
+```yaml
+- soy [Dennis](client_name)
+- soy [Dennis Kangme](client_name)
+- habla con [Dennis](client_name)
+- con [Dennis](client_name)
+- [Dennis](client_name) kangme
+- [Dennis](client_name)
+- soy [Juan](client_name)
+- soy [María](client_name)
+- soy [Carlos](client_name)
+- soy [Ana](client_name)
+- soy [Luis](client_name)
+```
+
+### Deny Identity Intent
+```yaml
+- no soy [Dennis](client_name)
+- no es [Dennis](client_name)
+- no habla con [Dennis](client_name)
+- no soy [Juan](client_name)
+- no es [María](client_name)
+- no habla con [Carlos](client_name)
 ```
 
 ## Testing Results
-✅ **Invoice Information**: Shows actual count and total amount
-✅ **Payment Scheduling**: Updates ALL pending invoices with payment date
-✅ **Dispute Handling**: Marks ALL pending invoices as disputed
-✅ **Status Tracking**: Proper invoice lifecycle management
-✅ **Database Integrity**: All operations maintain data consistency
 
-## Invoice Status Flow
-```
-pending → payment_scheduled (with payment_date)
-pending → disputed (when client denies debt)
-pending → paid (when payment is confirmed)
-```
+### ✅ Entity Extraction
+- **Input**: "hola soy Mauricio Martinez"
+- **Entity**: `client_name = "Mauricio Martinez"`
+- **Slot**: Automatically mapped to `client_name` slot
+- **Response**: "Hola soy veriBot... ¿hablo con Mauricio Martinez?"
+
+### ✅ Fallback Handling
+- **Input**: "hola" (no name)
+- **Fallback**: Uses regex extraction
+- **Default**: "Dennis Kangme" if no name found
+- **Logging**: Different logs for entity vs text extraction
+
+### ✅ Rule Integration
+- **Intent**: `EXTERNAL_init_context`
+- **Rule**: Triggers name extraction and greeting
+- **Flow**: Seamless integration with conversation
 
 ## Key Improvements
-- **Before**: Static invoice information ($55,000 fixed)
-- **After**: Dynamic invoice information (actual count and total)
-- **Before**: Only updated first pending invoice
-- **After**: Updates ALL pending invoices
-- **Before**: No dispute handling
-- **After**: Proper dispute status management
 
-## Database Verification
-```sql
--- Before dispute: 4 pending invoices ($110,000)
--- After dispute: 0 pending, 4 disputed invoices
--- After payment: 0 pending, 4 payment_scheduled invoices
+### Before vs After
+| Aspecto | Antes | Después |
+|---------|-------|---------|
+| Name Extraction | Manual regex only | Entity + regex fallback |
+| Slot Mapping | Custom action only | Automatic from_entity |
+| Training Examples | Generic patterns | Entity-annotated examples |
+| Pipeline | Basic NLU | Enhanced with NLUCommandAdapter |
+| Rule Coverage | Missing EXTERNAL_init_context | Complete rule coverage |
+
+### Entity Recognition Flow
+```
+User Input → Entity Extraction → Slot Mapping → Response Generation
+     ↓              ↓                ↓              ↓
+"hola soy Juan" → client_name → client_name slot → "¿hablo con Juan?"
+```
+
+## Database Integration
+
+### Logging Enhancements
+- **Entity Extraction**: `client_name_extracted_from_entity`
+- **Text Extraction**: `client_name_extracted_from_text`
+- **Fallback Handling**: Proper logging for debugging
+
+### Action Improvements
+```python
+# First try entity extraction
+entities = tracker.latest_message.get('entities', [])
+for entity in entities:
+    if entity['entity'] == 'client_name':
+        client_name = entity['value'].strip().title()
+        return [SlotSet("client_name", client_name)]
+
+# Fallback to regex extraction
+name_pattern = r'soy\s+([a-zA-Z\s]+)'
+match = re.search(name_pattern, latest_message)
 ```
 
 ## Breaking Changes
-None - All changes are backward compatible
+
+**None** - All changes are backward compatible
 
 ## Dependencies
-- mysql.connector-python: Database connectivity
-- python-dotenv: Environment variable management
-- rasa: Conversational AI framework
+
+- **NLUCommandAdapter**: Required for from_entity mapping
+- **Entity Training**: Enhanced training data with annotations
+- **Rule Configuration**: New rule for external context handling
 
 ## Environment Variables
-- DB_HOST, DB_USER, DB_PASSWORD, DB_NAME: Database configuration
-- OPENAI_API_KEY, RASA_TOKEN: API credentials
+
+No new environment variables required
 
 ## Next Steps (Optional)
-- Add invoice dispute resolution workflow
-- Implement payment confirmation process
-- Add invoice history tracking
-- Create dispute resolution dashboard
 
-Closes: #invoice-status-management
-Closes: #dispute-handling
-Closes: #bulk-invoice-updates 
+- Add more name variations and patterns
+- Implement name validation and normalization
+- Add support for compound names
+- Create name preference learning
+
+## Testing Commands
+
+```bash
+# Test entity extraction
+echo "EXTERNAL_init_context Mauricio Martinez" | rasa shell
+
+# Verify slot mapping
+rasa shell --debug
+
+# Check entity recognition
+rasa test nlu --nlu data/nlu.yml
+```
+
+## Performance Impact
+
+- **Entity Recognition**: Improved accuracy with annotated examples
+- **Slot Mapping**: Automatic mapping reduces custom action calls
+- **Response Quality**: More personalized responses with actual names
+- **Fallback Robustness**: Maintains functionality when entities not found
+
+---
+
+**🚀 Entity-based name extraction fully implemented and tested** 

@@ -56,6 +56,12 @@ rules:
     - intent: payment_dispute
     - action: action_classify_reason
 
+- rule: Handle external init context
+  steps:
+    - intent: EXTERNAL_init_context
+    - action: action_extract_client_name
+    - action: utter_greeting_and_identity_check
+
 - rule: Fallback for unknown responses
   steps:
     - or:
